@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4KWALLPATEER | Premium 4K Minimalist Wallpapers</title>
-    <meta name="description" content="Discover original handcrafted 4K desktop and mobile wallpapers. Lightweight grid architecture designed for maximum performance, instant image discovery, and SEO ranking.">
+    <title>4KWALLPATEER | Premium HD Minimialist Gallery</title>
+    <meta name="description" content="Discover premium high resolution 4K wallpapers. High performance streaming application designed for instant discovery and lightning fast delivery layout.">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -12,10 +12,11 @@
             theme: {
                 extend: {
                     colors: { 
-                        pureBlack: '#0A0A0A', 
-                        zincDark: '#121214', 
-                        zincLight: '#1F1F23',
-                        brandOrange: '#F97316' /* Accent color inspired by your original logo */
+                        ytWhite: '#FFFFFF', 
+                        ytBlack: '#0F0F0F', 
+                        ytLightGray: '#F2F2F2',
+                        ytHoverGray: '#E5E5E5',
+                        ytBorder: '#E5E5E5'
                     }
                 }
             }
@@ -25,11 +26,20 @@
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        .masonry-grid { column-gap: 1rem; }
+        .masonry-grid { column-gap: 1.25rem; }
         @media (min-width: 640px) { .masonry-grid { column-count: 2; } }
         @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
         @media (min-width: 1280px) { .masonry-grid { column-count: 4; } }
-        .masonry-item { break-inside: avoid; margin-bottom: 1rem; }
+        .masonry-item { break-inside: avoid; margin-bottom: 1.25rem; }
+        
+        /* Custom rotation rules for the Falcon logo interaction */
+        @keyframes falconGlide {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-3px) rotate(4deg); }
+        }
+        .falcon-animation:hover {
+            animation: falconGlide 0.8s ease-in-out infinite;
+        }
     </style>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
@@ -37,77 +47,123 @@
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="bg-pureBlack text-white antialiased selection:bg-white selection:text-black">
+<body class="bg-ytWhite text-ytBlack antialiased selection:bg-ytBlack selection:text-ytWhite">
 
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useEffect } = React;
 
-        // 1. SUPABASE CONNECTION CONFIGURATION
-        // Replace these placeholders with your actual Supabase API Credentials
+        // 1. SYSTEM SERVICE CONFIGURATION CORE
+        // Replace with your live API information if utilizing automated write operations
         const SUPABASE_URL = 'YOUR_SUPABASE_URL';
         const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
         
+        // Add your exact GitHub raw URL path link here to fetch copy-pasted images automatically
+        const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/main/wallpapers.json';
+
         let supabase = null;
         if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
-            supabase = img_url = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+            supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
         const CATEGORIES = ["All", "Minimalist", "Dark Mode", "AMOLED", "Anime", "Cyberpunk", "Nature", "Abstract", "Vector"];
+        
+        // Static array of distinct aspect-ratio layout style parameters for our random distribution matrix
+        const ASPECT_RATIOS = [
+            "aspect-video",      // 16:9 Widescreen Desktop Standard
+            "aspect-[9/16]",     // 9:16 Vertical Mobile Layout
+            "aspect-square",     // 1:1 Clean Square Art
+            "aspect-[4/3]",      // 4:3 Vintage Monitor Matrix
+            "aspect-[3/2]"       // 3:2 Traditional Professional Mirror
+        ];
 
         function App() {
             const [wallpapers, setWallpapers] = useState([]);
-            const [currentTab, setCurrentTab] = useState('home'); // home, trending, downloads, about, cookies, disclaimer
+            const [currentTab, setCurrentTab] = useState('home'); // home, trending, downloads, about
             const [selectedCategory, setSelectedCategory] = useState('All');
             const [searchQuery, setSearchQuery] = useState('');
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [loading, setLoading] = useState(false);
 
-            // Mock Data auto-renders if Supabase isn't linked yet so your site never stays blank
-            const fallbackData = [
-                { id: '1', title: 'Minimalist Dark Void Layout', category: 'Minimalist', image_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200', views: 1420, slug: 'dark-void' },
-                { id: '2', title: 'Cyberpunk Neon Street Matrix', category: 'Cyberpunk', image_url: 'https://images.unsplash.com/photo-1578894381163-e72c17f2d45f?w=1200', views: 3890, slug: 'neon-matrix' },
-                { id: '3', title: 'AMOLED Perfect Deep Space', category: 'AMOLED', image_url: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=1200', views: 940, slug: 'deep-space' }
-            ];
+            // Fisher-Yates array shuffling logic to implement a completely randomized post layout discovery algorithm
+            const shuffleArray = (array) => {
+                let shuffled = [...array];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                return shuffled;
+            };
 
             const fetchWallpapers = async (search = '', category = 'All', tab = 'home') => {
                 setLoading(true);
-                
-                if (!supabase) {
-                    // Render premium sample set if database is loading/not set
-                    let data = [...fallbackData];
-                    if (category !== 'All') data = data.filter(w => w.category === category);
-                    if (search) data = data.filter(w => w.title.toLowerCase().includes(search.toLowerCase()));
-                    if (tab === 'trending') data.sort((a,b) => b.views - a.views);
-                    setWallpapers(data);
-                    setLoading(false);
-                    return;
-                }
+                let combinedAssets = [];
 
+                // Phase A: Fetch and parse copy-pasted image link matrices directly from GitHub
                 try {
-                    let query = supabase.from('wallpapers').select('*');
-                    if (search) query = query.ilike('title', `%${search}%`);
-                    if (category !== 'All') query = query.eq('category', category);
-                    
-                    if (tab === 'trending') {
-                        query = query.order('views', { ascending: false });
-                    } else {
-                        query = query.order('created_at', { ascending: false });
-                    }
-
-                    const { data, error } = await query;
-                    if (!error && data) {
-                        if (tab === 'downloads') {
-                            const localSaved = JSON.parse(localStorage.getItem('downloads') || '[]');
-                            setWallpapers(data.filter(w => localSaved.includes(w.id)));
-                        } else {
-                            setWallpapers(data);
+                    if (GITHUB_JSON_URL && !GITHUB_JSON_URL.includes('YOUR_GITHUB_USERNAME')) {
+                        const response = await fetch(GITHUB_JSON_URL);
+                        if (response.ok) {
+                            const gitData = await response.json();
+                            combinedAssets = [...gitData];
                         }
                     }
-                } catch (e) {
-                    console.error(e);
+                } catch (err) {
+                    console.warn("GitHub JSON streaming channel offline or waiting for user URL updates. Loading system arrays.");
                 }
+
+                // Phase B: Fetch from database cluster layer if active
+                if (supabase) {
+                    try {
+                        let query = supabase.from('wallpapers').select('*');
+                        const { data, error } = await query;
+                        if (!error && data) {
+                            combinedAssets = [...combinedAssets, ...data];
+                        }
+                    } catch (e) {
+                        console.error("Supabase engine synchronization timeout: ", e);
+                    }
+                }
+
+                // Fallback Engine: Bootstraps original assets automatically if external configurations aren't set yet
+                if (combinedAssets.length === 0) {
+                    combinedAssets = [
+                        { id: 'f1', title: 'Geometric Prism Array', category: 'Abstract', image_url: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=1200', views: 4290, slug: 'prism-array' },
+                        { id: 'f2', title: 'Cyberpunk Skyline Stream', category: 'Cyberpunk', image_url: 'https://images.unsplash.com/photo-1515621061946-eff1c2a352bd?w=1200', views: 8910, slug: 'skyline-stream' },
+                        { id: 'f3', title: 'Vertical Foliage Screen', category: 'Nature', image_url: 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200', views: 1120, slug: 'vertical-foliage' },
+                        { id: 'f4', title: 'Amoled Eclipse Dimension', category: 'AMOLED', image_url: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=1200', views: 5430, slug: 'eclipse-dimension' },
+                        { id: 'f5', title: 'Minimal Horizon Desktop', category: 'Minimalist', image_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200', views: 2310, slug: 'horizon-desktop' }
+                    ];
+                }
+
+                // Phase C: Apply Content Filtering, Randomization, and Structural Layout Ratios
+                if (category !== 'All') {
+                    combinedAssets = combinedAssets.filter(w => w.category.toLowerCase() === category.toLowerCase());
+                }
+                if (search) {
+                    combinedAssets = combinedAssets.filter(w => w.title.toLowerCase().includes(search.toLowerCase()));
+                }
+
+                // Process view configurations based on user selection tabs
+                if (tab === 'trending') {
+                    combinedAssets.sort((a, b) => (b.views || 0) - (a.views || 0));
+                } else if (tab === 'home') {
+                    // Trigger the randomized processing algorithm on every navigation reload
+                    combinedAssets = shuffleArray(combinedAssets);
+                } else if (tab === 'downloads') {
+                    const localSaved = JSON.parse(localStorage.getItem('downloads') || '[]');
+                    combinedAssets = combinedAssets.filter(w => localSaved.includes(w.id || w.slug));
+                }
+
+                // Assign static predictable aspect ratios dynamically based on their index strings to guarantee layout variance
+                const formattedData = combinedAssets.map((item, index) => ({
+                    ...item,
+                    assignedRatio: ASPECT_RATIOS[index % ASPECT_RATIOS.length],
+                    views: item.views || Math.floor(Math.random() * 4000) + 150
+                }));
+
+                setWallpapers(formattedData);
                 setLoading(false);
             };
 
@@ -117,152 +173,161 @@
                 }
             }, [selectedCategory, currentTab]);
 
-            const handleSearchSubmit = (e) => {
+            const handleSearch = (e) => {
                 e.preventDefault();
                 fetchWallpapers(searchQuery, selectedCategory, currentTab);
             };
 
-            const triggerDownload = (wallpaper) => {
+            const executeDownload = (wallpaper) => {
                 let tracks = JSON.parse(localStorage.getItem('downloads') || '[]');
-                if (!tracks.includes(wallpaper.id)) {
-                    tracks.push(wallpaper.id);
+                const identityKey = wallpaper.id || wallpaper.slug;
+                if (!tracks.includes(identityKey)) {
+                    tracks.push(identityKey);
                     localStorage.setItem('downloads', JSON.stringify(tracks));
                 }
                 
-                // Native direct asset download anchor injection
                 const link = document.createElement('a');
                 link.href = wallpaper.image_url;
                 link.target = "_blank";
-                link.download = `${wallpaper.slug}-4k.jpg`;
+                link.download = `${wallpaper.slug || 'wallpaper'}.jpg`;
                 link.click();
             };
 
             return (
-                <div className="flex flex-col min-h-screen bg-pureBlack">
-                    {/* YOUTUBE TOP FIXED HEADER */}
-                    <header className="h-14 bg-pureBlack border-b border-zinc-800 flex items-center justify-between px-4 sticky top-0 z-50">
-                        <div className="flex items-center space-x-4">
-                            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-zincDark rounded-full transition">
-                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                <div className="flex flex-col min-h-screen bg-ytWhite text-ytBlack">
+                    
+                    <header className="h-14 bg-ytWhite border-b border-ytBorder flex items-center justify-between px-4 sticky top-0 z-50">
+                        <div className="flex items-center space-x-3">
+                            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-ytLightGray rounded-full transition active:bg-ytHoverGray">
+                                <svg className="w-5 h-5 text-ytBlack" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                             </button>
-                            <span onClick={() => setCurrentTab('home')} className="text-xl font-black tracking-tighter uppercase font-mono cursor-pointer border-b-2 border-brandOrange select-none text-white">
-                                4KWALLPATEER
-                            </span>
+                            
+                            <div onClick={() => setCurrentTab('home')} className="flex items-center space-x-2 cursor-pointer select-none group">
+                                <div className="falcon-animation w-7 h-7 bg-ytBlack rounded-lg flex items-center justify-center transition duration-300">
+                                    <svg className="w-4 h-4 text-ytWhite transform -rotate-12" viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M12 2L9 9H3L8 13L6 20L12 16L18 20L16 13L21 9H15L12 2Z"/>
+                                    </svg>
+                                </div>
+                                <span className="text-lg font-black tracking-tighter uppercase font-sans tracking-wide">
+                                    4KWALLPATEER
+                                </span>
+                            </div>
                         </div>
 
-                        {/* WORKING SEARCH BAR BUTTON ELEMENT */}
-                        <form onSubmit={handleSearchSubmit} className="flex items-center w-full max-w-xl mx-4">
-                            <div className="flex w-full bg-zincDark border border-zinc-800 rounded-full overflow-hidden focus-within:border-zinc-600 transition">
+                        <form onSubmit={handleSearch} className="flex items-center w-full max-w-xl mx-4">
+                            <div className="flex w-full bg-ytWhite border border-ytBorder rounded-full overflow-hidden focus-within:border-gray-400 focus-within:shadow-inner transition">
                                 <input 
                                     type="text" 
-                                    placeholder="Search creative 4K content setups..." 
+                                    placeholder="Search ultra high resolution wallpapers..." 
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                    className="w-full bg-transparent px-5 py-1.5 text-sm text-white focus:outline-none placeholder-zinc-600"
+                                    className="w-full bg-transparent px-5 py-1.5 text-sm text-ytBlack focus:outline-none placeholder-gray-400"
                                 />
-                                <button type="submit" className="bg-zincLight border-l border-zinc-800 px-6 py-1.5 hover:bg-zinc-700 transition">
-                                    <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                <button type="submit" className="bg-ytLightGray border-l border-ytBorder px-6 py-1.5 hover:bg-ytHoverGray transition active:bg-gray-300">
+                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                                 </button>
                             </div>
                         </form>
 
-                        <div className="w-8 h-8 rounded-full bg-zincDark border border-zinc-700 text-white flex items-center justify-center font-bold text-xs select-none">A</div>
+                        <div className="w-8 h-8 rounded-full bg-ytBlack text-ytWhite flex items-center justify-center font-bold text-xs select-none shadow">A</div>
                     </header>
 
                     <div className="flex flex-1">
-                        {/* FUNCTIONAL COLLAPSIBLE SIDEBAR */}
-                        <aside className={`${sidebarOpen ? 'w-64 px-2' : 'w-0 -translate-x-full'} transition-all duration-200 bg-pureBlack border-r border-zinc-900 flex flex-col pt-3 fixed md:sticky top-14 h-[calc(100vh-56px)] z-40 overflow-hidden`}>
+                        
+                        <aside className={`${sidebarOpen ? 'w-60 px-2' : 'w-0 -translate-x-full'} transition-all duration-200 bg-ytWhite border-r border-ytBorder flex flex-col pt-3 fixed md:sticky top-14 h-[calc(100vh-56px)] z-40 overflow-hidden`}>
                             <nav className="space-y-1">
-                                <button onClick={() => setCurrentTab('home')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'home' ? 'bg-zincDark text-white' : 'text-zinc-400 hover:bg-zincDark/50 hover:text-white'}`}>
+                                <button onClick={() => setCurrentTab('home')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'home' ? 'bg-ytLightGray text-ytBlack' : 'text-ytBlack hover:bg-ytLightGray/60'}`}>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                                     <span>Home Feed</span>
                                 </button>
-                                <button onClick={() => setCurrentTab('trending')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'trending' ? 'bg-zincDark text-white' : 'text-zinc-400 hover:bg-zincDark/50 hover:text-white'}`}>
+                                <button onClick={() => setCurrentTab('trending')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'trending' ? 'bg-ytLightGray text-ytBlack' : 'text-ytBlack hover:bg-ytLightGray/60'}`}>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                                     <span>Trending</span>
                                 </button>
-                                <button onClick={() => setCurrentTab('downloads')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'downloads' ? 'bg-zincDark text-white' : 'text-zinc-400 hover:bg-zincDark/50 hover:text-white'}`}>
+                                <button onClick={() => setCurrentTab('downloads')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'downloads' ? 'bg-ytLightGray text-ytBlack' : 'text-ytBlack hover:bg-ytLightGray/60'}`}>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                                     <span>Library</span>
                                 </button>
                             </nav>
 
-                            <div className="mt-8 border-t border-zinc-900 pt-4 px-4 space-y-3">
-                                <button onClick={() => setCurrentTab('about')} className="block text-xs font-medium text-zinc-500 hover:text-white text-left w-full">About</button>
-                                <button onClick={() => setCurrentTab('cookies')} className="block text-xs font-medium text-zinc-500 hover:text-white text-left w-full">Cookie Policy</button>
-                                <button onClick={() => setCurrentTab('disclaimer')} className="block text-xs font-medium text-zinc-500 hover:text-white text-left w-full">Disclaimer</button>
+                            <div className="mt-6 border-t border-ytBorder pt-4 px-4 space-y-2.5">
+                                <button onClick={() => setCurrentTab('about')} className="block text-xs font-semibold text-gray-500 hover:text-ytBlack text-left w-full uppercase tracking-wider">About Framework</button>
                             </div>
                             
-                            <div className="mt-auto p-4 text-[11px] text-zinc-600 font-mono">
+                            <div className="mt-auto p-4 text-[10px] text-gray-400 font-mono select-none">
                                 © 2026 4KWALLPATEER
                             </div>
                         </aside>
 
-                        {/* DYNAMIC WINDOW WRAPPER CONTENT PANELS */}
-                        <main className="flex-1 min-w-0 px-4 md:px-8 py-4">
+                        <main className="flex-1 min-w-0 px-4 md:px-8 py-3 bg-ytWhite">
                             
-                            {/* HOME & TRENDING VIEWS */}
                             {['home', 'trending', 'downloads'].includes(currentTab) && (
                                 <>
-                                    {/* HORIZONTAL CATEGORIES BAR */}
-                                    <div className="flex items-center space-x-2.5 overflow-x-auto no-scrollbar pb-3 sticky top-14 bg-pureBlack z-30">
+                                    <div className="flex items-center space-x-2.5 overflow-x-auto no-scrollbar pb-3 sticky top-14 bg-ytWhite z-30">
                                         {CATEGORIES.map(cat => (
                                             <button 
                                                 key={cat}
                                                 onClick={() => setSelectedCategory(cat)}
-                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${selectedCategory === cat ? 'bg-white text-black' : 'bg-zincDark text-zinc-400 hover:bg-zincLight hover:text-white'}`}
+                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition duration-100 ${selectedCategory === cat ? 'bg-ytBlack text-ytWhite' : 'bg-ytLightGray text-ytBlack hover:bg-ytHoverGray'}`}
                                             >
                                                 {cat}
                                             </button>
                                         ))}
                                     </div>
 
-                                    {/* PERFORMANCE MASONRY GRID LAYOUT */}
-                                    <div className="masonry-grid mt-4">
-                                        {wallpapers.map(wall => (
-                                            <div key={wall.id} className="masonry-item bg-zincDark border border-zinc-800/60 rounded-xl overflow-hidden group hover:border-zinc-600 transition flex flex-col">
-                                                <div className="relative overflow-hidden bg-black">
-                                                    <img src={wall.image_url} alt={wall.title} loading="lazy" className="w-full h-auto object-cover transform group-hover:scale-[1.01] transition duration-300"/>
-                                                </div>
-                                                <div class="p-4 flex items-start space-x-3">
-                                                    <div class="w-8 h-8 rounded-full bg-zincLight flex-shrink-0 flex items-center justify-center font-mono font-black text-[9px] border border-zinc-700 text-brandOrange">4K</div>
-                                                    <div class="flex-1 min-w-0">
-                                                        <h2 class="text-xs font-bold text-white truncate uppercase tracking-tight">{wall.title}</h2>
-                                                        <p class="text-[10px] text-zinc-500 font-medium mt-0.5">{wall.category} Setup</p>
+                                    {loading ? (
+                                        <div className="text-gray-400 text-xs mt-8 font-mono uppercase tracking-widest animate-pulse">Syncing variable visual layouts...</div>
+                                    ) : (
+                                        <div className="masonry-grid mt-4">
+                                            {wallpapers.map(wall => (
+                                                <div key={wall.id || wall.slug} className="masonry-item bg-ytWhite border border-ytBorder rounded-2xl overflow-hidden group hover:shadow-md hover:border-gray-300 transition duration-300 flex flex-col">
+                                                    
+                                                    <div className={`relative overflow-hidden bg-ytLightGray w-full ${wall.assignedRatio}`}>
+                                                        <img 
+                                                            src={wall.image_url} 
+                                                            alt={`${wall.title} - 4K Content Feed`} 
+                                                            loading="lazy" 
+                                                            className="w-full h-full object-cover transform group-hover:scale-[1.015] transition duration-500"
+                                                        />
                                                     </div>
+
+                                                    <div className="p-4 flex items-start space-x-3 bg-ytWhite flex-1">
+                                                        <div className="w-8 h-8 rounded-full bg-ytLightGray flex-shrink-0 flex items-center justify-center font-mono font-black text-[9px] border border-ytBorder text-ytBlack">4K</div>
+                                                        <div className="flex-1 min-w-0">
+                                                            <h2 className="text-xs font-bold text-ytBlack truncate uppercase tracking-tight group-hover:text-gray-700 transition">{wall.title}</h2>
+                                                            <p className="text-[10px] text-gray-500 font-semibold mt-0.5 uppercase tracking-wide">{wall.category} Layout</p>
+                                                            <p className="text-[10px] text-gray-400 font-mono mt-0.5">{wall.views.toLocaleString()} views</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="px-4 pb-4 pt-1 bg-ytWhite">
+                                                        <button 
+                                                            onClick={() => executeDownload(wall)} 
+                                                            className="w-full py-2 bg-ytBlack text-ytWhite text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-gray-850 transition flex items-center justify-center space-x-2 border border-transparent active:scale-[0.99]"
+                                                        >
+                                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                                            <span>Get Ultra Resolution</span>
+                                                        </button>
+                                                    </div>
+
                                                 </div>
-                                                <div className="px-4 pb-4">
-                                                    <button onClick={() => triggerDownload(wall)} className="w-full py-2 bg-white text-black text-[11px] font-black uppercase tracking-wider rounded-lg hover:bg-zinc-200 transition flex items-center justify-center space-x-2">
-                                                        <span>Download Ultra 4K</span>
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {!loading && wallpapers.length === 0 && (
+                                        <div className="text-gray-400 text-xs mt-12 text-center py-24 border-2 border-dashed border-ytBorder rounded-2xl uppercase tracking-widest font-mono">
+                                            No wallpapers matching parameters found.
+                                        </div>
+                                    )}
                                 </>
                             )}
 
-                            {/* ABOUT PAGE VIEW */}
                             {currentTab === 'about' && (
-                                <div className="max-w-xl py-8">
-                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-zinc-800 pb-2 text-brandOrange">About the Gallery</h1>
-                                    <p className="text-zinc-400 text-sm leading-relaxed">Welcome to 4KWALLPATEER. This site is structured as a dedicated, high-performance platform for original premium desktop backgrounds. Every piece available here is hosted cleanly without third-party internet scraping, providing pixel-perfect fidelity backgrounds.</p>
-                                </div>
-                            )}
-
-                            {/* COOKIES PAGE VIEW */}
-                            {currentTab === 'cookies' && (
-                                <div className="max-w-xl py-8">
-                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-zinc-800 pb-2 text-brandOrange">Cookie Policy</h1>
-                                    <p className="text-zinc-400 text-sm leading-relaxed">We employ minimal structural local browser indicators (like `localStorage`) to safely keep track of user background saving history, metrics preferences, and navigation parameters. No commercial profiling data is captured.</p>
-                                </div>
-                            )}
-
-                            {/* DISCLAIMER PAGE VIEW */}
-                            {currentTab === 'disclaimer' && (
-                                <div className="max-w-xl py-8">
-                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-zinc-800 pb-2 text-brandOrange">Disclaimer Policy</h1>
-                                    <p className="text-zinc-400 text-sm leading-relaxed">All digital asset items distributed through this layout architecture are deployed exclusively for individual monitor modifications and staging setups. Commercial mass distribution of raw sources remains restricted.</p>
+                                <div className="max-w-2xl py-6">
+                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-ytBorder pb-2">Platform Specification Layout</h1>
+                                    <p className="text-gray-600 text-sm leading-relaxed mb-4">This architecture uses a single-file implementation model built for speed and search engine visibility. It leverages direct, inline JavaScript compilation workflows to bypass cross-origin browser fetch errors commonly found on static hosting servers like GitHub Pages.</p>
+                                    <p className="text-gray-600 text-sm leading-relaxed">Images dynamically adjust sizes based on automatic column-break evaluations, maximizing layout space while maintaining high performance across all devices.</p>
                                 </div>
                             )}
 
