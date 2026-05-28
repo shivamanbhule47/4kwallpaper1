@@ -6,7 +6,6 @@
     <title>4KWALLPATEER | Premium HD Minimalist Gallery Cluster</title>
     <meta name="description" content="Premium YouTube-inspired light mode network architecture for ultra 4K wallpaper discoverability.">
     
-    <!-- Tailwind CSS Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -24,7 +23,6 @@
         }
     </script>
 
-    <!-- Structural CSS Definitions -->
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -43,7 +41,6 @@
         }
     </style>
 
-    <!-- Production Runtime Infrastructure CDNs -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -56,13 +53,15 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // GLOBAL CONFIGURATION SYSTEM KEYWORDS
+        // ==========================================
+        // SYSTEM CONFIGURATION & ROUTER LINKS
+        // ==========================================
         const SUPABASE_URL = 'YOUR_SUPABASE_URL';
         const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
         const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/main/wallpapers.json';
 
         let supabase = null;
-        if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+        if (SUPABASE_URL !== 'YOUR_SUPABASE_URL' && SUPABASE_URL.trim() !== '') {
             supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         }
 
@@ -70,7 +69,7 @@
         const ASPECT_RATIOS = ["aspect-video", "aspect-[9/16]", "aspect-square", "aspect-[4/3]", "aspect-[3/2]"];
 
         function App() {
-            // General Display States
+            // General Display Feeds States
             const [wallpapers, setWallpapers] = useState([]);
             const [currentTab, setCurrentTab] = useState('home'); // home, trending, library, about, admin
             const [selectedCategory, setSelectedCategory] = useState('All');
@@ -79,7 +78,7 @@
             const [loading, setLoading] = useState(false);
             const [activePreview, setActivePreview] = useState(null);
 
-            // User Profile, Library Storage & Authentication States
+            // User Space & Authentication State Tracking
             const [user, setUser] = useState(null);
             const [authModalOpen, setAuthModalOpen] = useState(false);
             const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -89,7 +88,7 @@
             const [userLikes, setUserLikes] = useState([]);
             const [userDownloads, setUserDownloads] = useState([]);
 
-            // Admin Content Upload Panel Form Generation States
+            // Creator Content Generator Control Dashboard States
             const [newTitle, setNewTitle] = useState('');
             const [newUrl, setNewUrl] = useState('');
             const [newCategory, setNewCategory] = useState('Minimalist');
@@ -104,7 +103,7 @@
                 { id: 'w6', title: 'Anime Skyline Sunset Vista', category: 'Anime', image_url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1400', views: 7100, slug: 'anime-skyline' }
             ];
 
-            // Setup Authentication Observers & Local Storage Syncing
+            // Setup Authentication Synchronization on Initialization
             useEffect(() => {
                 setUserLikes(JSON.parse(localStorage.getItem('user_likes') || '[]'));
                 setUserDownloads(JSON.parse(localStorage.getItem('user_downloads') || '[]'));
@@ -118,22 +117,22 @@
                     });
                     return () => subscription.unsubscribe();
                 } else {
-                    // Fallback Storage Simulation Session for Offline testing
+                    // Safe Fallback Auto-Session Simulation for Standalone GitHub Pages Deployment
                     const simulatedUser = localStorage.getItem('sim_user');
-                    if (simulatedUser) setUser({ email: simulatedUser, id: 'sim-id-123' });
+                    if (simulatedUser) setUser({ email: simulatedUser, id: 'sim-user-id' });
                 }
             }, []);
 
             const handleAuthSubmit = async (e) => {
                 e.preventDefault();
-                if (!authEmail || !authPassword) return;
+                if (!authEmail.trim() || !authPassword.trim()) return;
 
                 if (supabase) {
                     try {
                         if (authMode === 'register') {
                             const { data, error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
                             if (error) throw error;
-                            alert('Registration verified! Access granted.');
+                            alert('Registration verified! Profile active.');
                         } else {
                             const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
                             if (error) throw error;
@@ -141,11 +140,11 @@
                         setAuthModalOpen(false);
                     } catch (error) { alert(error.message); }
                 } else {
-                    // Caching Simulation Mechanism for standalone GitHub serving paths
+                    // Cache session locally if backend servers parameters are untouched
                     localStorage.setItem('sim_user', authEmail);
-                    setUser({ email: authEmail, id: 'sim-id-123' });
+                    setUser({ email: authEmail, id: 'sim-user-id' });
                     setAuthModalOpen(false);
-                    alert(`Simulated auth channel active as: ${authEmail}`);
+                    alert(`Simulated auth channel successfully routed as: ${authEmail}`);
                 }
             };
 
@@ -155,6 +154,7 @@
                 setUser(null);
                 setProfileDropdownOpen(false);
                 setCurrentTab('home');
+                setActivePreview(null);
             };
 
             const fetchInitialWallpapers = async () => {
@@ -165,23 +165,23 @@
                         const response = await fetch(GITHUB_JSON_URL);
                         if (response.ok) assets = await response.json();
                     }
-                } catch (err) { console.warn("GitHub JSON streaming bypassed."); }
+                } catch (err) { console.warn("GitHub content engine bypassed; loading defaults."); }
 
                 if (supabase) {
                     try {
                         const { data } = await supabase.from('wallpapers').select('*');
-                        if (data) assets = [...assets, ...data];
+                        if (data && data.length > 0) assets = [...assets, ...data];
                     } catch (e) { console.error(e); }
                 }
 
                 if (assets.length === 0) assets = [...fallbackData];
 
-                // Map static structured metrics parameters
+                // Inject structured layout metrics securely
                 const formatted = assets.map((item, index) => ({
                     ...item,
                     assignedRatio: ASPECT_RATIOS[index % ASPECT_RATIOS.length],
-                    views: item.views || (1020 + (index * 240)),
-                    likesCount: item.likesCount || (45 + (index * 12))
+                    views: item.views || (1020 + (index * 315)),
+                    likesCount: item.likesCount || (45 + (index * 14))
                 }));
                 setWallpapers(formatted);
                 setLoading(false);
@@ -189,16 +189,14 @@
 
             useEffect(() => { fetchInitialWallpapers(); }, []);
 
-            // HIGH-PERFORMANCE MULTI-PARAMETER LIVE FILTERING ALGORITHM
+            // HIGH-PERFORMANCE SEARCH & FILTERING SYSTEM MATRIX
             const filteredWallpapers = useMemo(() => {
                 let results = [...wallpapers];
 
-                // Filter by horizontal category pill parameters
                 if (selectedCategory !== 'All') {
                     results = results.filter(w => w.category.toLowerCase() === selectedCategory.toLowerCase());
                 }
 
-                // Enhanced Search Algorithm: Matches Titles, Categories, and Identifier Slugs
                 if (searchQuery) {
                     const cleanQuery = searchQuery.toLowerCase().trim();
                     results = results.filter(w => 
@@ -208,11 +206,10 @@
                     );
                 }
 
-                // Process contextual visual tab routes
                 if (currentTab === 'trending') {
                     results.sort((a, b) => b.views - a.views);
                 } else if (currentTab === 'library') {
-                    // Strict User Library isolation criteria
+                    // Strict personal user library matching filter parameters
                     results = results.filter(w => 
                         userLikes.includes(w.id || w.slug) || 
                         userDownloads.includes(w.id || w.slug)
@@ -259,13 +256,13 @@
                 const link = document.createElement('a');
                 link.href = wallpaper.image_url;
                 link.target = "_blank";
-                link.download = `${wallpaper.slug || 'premium-hd'}.jpg`;
+                link.download = `${wallpaper.slug || 'premium-hd-art'}.jpg`;
                 link.click();
             };
 
             const handleGenerateJson = (e) => {
                 e.preventDefault();
-                if (!newTitle || !newUrl) return alert("Please populate all parameters.");
+                if (!newTitle.trim() || !newUrl.trim()) return alert("Please populate all text fields parameters.");
                 const generatedSlug = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
                 
                 const newAssetObject = {
@@ -273,13 +270,14 @@
                     category: newCategory,
                     image_url: newUrl,
                     slug: generatedSlug,
-                    views: Math.floor(Math.random() * 200) + 15,
-                    likesCount: Math.floor(Math.random() * 10) + 2
+                    views: Math.floor(Math.random() * 250) + 20,
+                    likesCount: Math.floor(Math.random() * 15) + 3
                 };
 
                 setGeneratedJson(JSON.stringify(newAssetObject, null, 4));
             };
 
+            // Related Algorithm Isolation Parameters matching active item categories
             const relatedWallpapers = activePreview 
                 ? wallpapers.filter(w => w.category === activePreview.category && (w.id !== activePreview.id && w.slug !== activePreview.slug))
                 : [];
@@ -287,10 +285,10 @@
             return (
                 <div className="flex flex-col min-h-screen bg-ytWhite text-ytBlack relative">
                     
-                    <!-- TOP FIXED NAVIGATION HEADER -->
+                    {/* TOP FIXED NAVIGATION HEADER FRAMEWORK */}
                     <header className="h-14 bg-ytWhite border-b border-ytBorder flex items-center justify-between px-4 sticky top-0 z-50 select-none">
                         <div className="flex items-center space-x-3">
-                            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-ytLightGray rounded-full transition active:bg-ytHoverGray">
+                            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-ytLightGray rounded-full transition">
                                 <svg className="w-5 h-5 text-ytBlack" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                             </button>
                             <div onClick={() => { setCurrentTab('home'); setActivePreview(null); }} className="flex items-center space-x-2 cursor-pointer group">
@@ -303,12 +301,12 @@
                             </div>
                         </div>
 
-                        <!-- LIVE ADVANCED SEARCH ARCHITECTURE -->
+                        {/* HIGH-PERFORMANCE UNIFIED SEARCH ARCHITECTURE */}
                         <div className="flex items-center w-full max-w-xl mx-4">
                             <div className="flex w-full bg-ytWhite border border-ytBorder rounded-full overflow-hidden focus-within:border-gray-400 focus-within:shadow-inner transition">
                                 <input 
                                     type="text" 
-                                    placeholder="Search by title, category context, or tags layout..." 
+                                    placeholder="Search by creative asset title, category styles, or tags layout..." 
                                     value={searchQuery}
                                     onChange={(e) => { setSearchQuery(e.target.value); if(activePreview) setActivePreview(null); }}
                                     className="w-full bg-transparent px-5 py-1.5 text-sm text-ytBlack focus:outline-none placeholder-gray-400"
@@ -319,14 +317,14 @@
                             </div>
                         </div>
 
-                        <!-- USER PROFILE AUTHENTICATION ROUTER INTERFACE -->
+                        {/* USER DROP ACCOUNT CONTROL MODULE */}
                         <div className="relative">
                             {user ? (
                                 <button 
                                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                                    className="w-8 h-8 rounded-full bg-ytBlack text-ytWhite flex items-center justify-center font-bold text-xs shadow hover:scale-105 transition"
+                                    className="w-8 h-8 rounded-full bg-ytBlack text-ytWhite flex items-center justify-center font-bold text-xs shadow hover:scale-105 transition uppercase"
                                 >
-                                    {user.email.substring(0, 2).toUpperCase()}
+                                    {user.email.substring(0, 2)}
                                 </button>
                             ) : (
                                 <button 
@@ -338,16 +336,16 @@
                                 </button>
                             )}
 
-                            <!-- YOUTUBE-STYLE ACCOUNT MENU DROPDOWN PANEL -->
+                            {/* USER PROFILE INTERACTION OPTIONS DROPDOWN */}
                             {profileDropdownOpen && user && (
                                 <div className="absolute right-0 mt-2 w-56 bg-ytWhite border border-ytBorder rounded-2xl shadow-xl py-2 z-50 font-sans">
                                     <div className="px-4 py-2 border-b border-ytBorder">
-                                        <p className="text-xs text-gray-400 font-medium">Signed in as</p>
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Account Active</p>
                                         <p className="text-xs font-bold text-ytBlack truncate">{user.email}</p>
                                     </div>
                                     <button onClick={() => { setCurrentTab('library'); setProfileDropdownOpen(false); setActivePreview(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-ytBlack hover:bg-ytLightGray flex items-center space-x-2">
                                         <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-                                        <span>My Saved & Library</span>
+                                        <span>My Personal Library</span>
                                     </button>
                                     <button onClick={() => { setCurrentTab('admin'); setProfileDropdownOpen(false); setActivePreview(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-ytBlack hover:bg-ytLightGray flex items-center space-x-2">
                                         <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -355,7 +353,7 @@
                                     </button>
                                     <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center space-x-2 border-t border-ytBorder mt-1">
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-                                        <span>Sign Out Account</span>
+                                        <span>Sign Out Session</span>
                                     </button>
                                 </div>
                             )}
@@ -363,7 +361,7 @@
                     </header>
 
                     <div className="flex flex-1">
-                        <!-- APP SIDEBAR CONTROLS -->
+                        {/* APP COLLAPSIBLE SIDEBAR PARAMETERS */}
                         <aside className={`${sidebarOpen ? 'w-60 px-2' : 'w-0 -translate-x-full'} transition-all duration-200 bg-ytWhite border-r border-ytBorder flex flex-col pt-3 fixed md:sticky top-14 h-[calc(100vh-56px)] z-40 overflow-hidden select-none`}>
                             <nav className="space-y-1">
                                 <button onClick={() => { setCurrentTab('home'); setActivePreview(null); }} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'home' && !activePreview ? 'bg-ytLightGray text-ytBlack' : 'text-ytBlack hover:bg-ytLightGray/60'}`}>
@@ -382,13 +380,13 @@
                             <div className="mt-6 border-t border-ytBorder pt-4 px-4 space-y-2.5">
                                 <button onClick={() => { setCurrentTab('about'); setActivePreview(null); }} className={`block text-xs font-semibold text-left w-full uppercase tracking-wider ${currentTab === 'about' ? 'text-blue-600' : 'text-gray-500 hover:text-ytBlack'}`}>About System</button>
                             </div>
-                            <div className="mt-auto p-4 text-[10px] text-gray-400 font-mono select-none">© 2026 4KWALLPATEER</div>
+                            <div className="mt-auto p-4 text-[10px] text-gray-400 font-mono">© 2026 4KWALLPATEER</div>
                         </aside>
 
-                        <!-- COMPONENT LAYOUT MANAGER CONTAINER -->
+                        {/* DISPLAY PORT CONTENT WORKSPACE */}
                         <main className="flex-1 min-w-0 px-4 md:px-8 py-3 bg-ytWhite">
                             
-                            {/* VIEW ROUTE A: HOME FEED / TRENDING FEED / USER LIBRARY */}
+                            {/* VIEW ROUTE A: STANDARD GRID DISPLAY (HOME, TRENDING, LIBRARY) */}
                             {['home', 'trending', 'library'].includes(currentTab) && !activePreview && (
                                 <>
                                     {/* HORIZONTAL CATEGORY PILL SELECTORS */}
@@ -397,14 +395,14 @@
                                             <button 
                                                 key={cat} 
                                                 onClick={() => setSelectedCategory(cat)}
-                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${selectedCategory === cat ? 'bg-ytBlack text-ytWhite' : 'bg-ytLightGray text-ytBlack hover:bg-ytHoverGray'}`}
+                                                className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition flex-shrink-0 ${selectedCategory === cat ? 'bg-ytBlack text-ytWhite' : 'bg-ytLightGray text-ytBlack hover:bg-ytHoverGray'}`}
                                             >
                                                 {cat}
                                             </button>
                                         ))}
                                     </div>
 
-                                    {/* MULTI-RATIO DESIGN FEED GRID SYSTEM */}
+                                    {/* MASONRY FEED GRID LAYER */}
                                     <div className="masonry-grid mt-4">
                                         {filteredWallpapers.map(wall => (
                                             <div key={wall.id || wall.slug} onClick={() => setActivePreview(wall)} className="masonry-item bg-ytWhite border border-ytBorder rounded-2xl overflow-hidden group hover:shadow-md hover:border-gray-300 transition cursor-pointer flex flex-col">
@@ -425,17 +423,17 @@
 
                                     {filteredWallpapers.length === 0 && (
                                         <div className="text-gray-400 text-xs mt-12 text-center py-24 border-2 border-dashed border-ytBorder rounded-2xl uppercase tracking-widest font-mono select-none">
-                                            {currentTab === 'library' ? "No saved or downloaded wallpapers found inside your library." : "No matching catalog elements found."}
+                                            {currentTab === 'library' ? "Your personal saved or downloaded history profile is empty." : "No matching catalog elements found inside streaming array."}
                                         </div>
                                     )}
                                 </>
                             )}
 
-                            {/* VIEW ROUTE B: WATCH PAGE INSPIRED HIGH RESOLUTION LIVE PREVIEW MODE */}
+                            {/* VIEW ROUTE B: YOUTUBE WATCH VISTA CLONE LIVE MODAL LIGHTBOX PREVIEW */}
                             {activePreview && (
-                                <div className="flex flex-col lg:flex-row gap-6 mt-2 max-w-7xl mx-auto animate-fadeIn">
+                                <div className="flex flex-col lg:flex-row gap-6 mt-2 max-w-7xl mx-auto">
                                     
-                                    <!-- THEATER VIEW SCREEN PORT -->
+                                    {/* MAIN FOCUS VISUAL BOX LEFT COLUMN */}
                                     <div className="flex-1 lg:max-w-[70%]">
                                         <div className="bg-ytLightGray rounded-2xl overflow-hidden border border-ytBorder shadow-sm relative">
                                             <img src={activePreview.image_url} alt={activePreview.title} className="w-full h-auto max-h-[75vh] object-contain mx-auto"/>
@@ -452,7 +450,7 @@
                                                 </div>
                                             </div>
 
-                                            <!-- THEATER CONTROLS INTERACTION MATRICES -->
+                                            {/* ACTION PARAMETERS CONTROLS PANEL */}
                                             <div className="flex items-center space-x-2 select-none">
                                                 <button 
                                                     onClick={() => toggleLike(activePreview.id || activePreview.slug)}
@@ -477,9 +475,9 @@
                                         </div>
                                     </div>
 
-                                    <!-- SIDEBAR RECOMMENDED LINK STREAM MATCH ALGORITHM -->
+                                    {/* SIDEBAR RELATED POSTS RECOMMENDATION COLUMNS RIGHT COLUMN */}
                                     <div className="flex-1 lg:max-w-[30%] space-y-3">
-                                        <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 border-b border-ytBorder pb-1.5 select-none">Related Asset Configurations</h3>
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 border-b border-ytBorder pb-1.5 select-none">Up Next: Related Configurations</h3>
                                         <div className="space-y-3 max-h-[85vh] overflow-y-auto pr-1 no-scrollbar">
                                             {relatedWallpapers.map(rel => (
                                                 <div 
@@ -498,14 +496,14 @@
                                                 </div>
                                             ))}
                                             {relatedWallpapers.length === 0 && (
-                                                <div className="text-gray-400 text-[11px] uppercase tracking-wide py-6 text-center font-mono border border-dashed border-ytBorder rounded-xl select-none">End of linked category configuration tree.</div>
+                                                <div className="text-gray-400 text-[11px] uppercase tracking-wide py-6 text-center font-mono border border-dashed border-ytBorder rounded-xl select-none">End of linked category matching tree node.</div>
                                             )}
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* VIEW ROUTE C: SYSTEM SPECIFICATION ABOUT PAGE */}
+                            {/* VIEW ROUTE C: PLATFORM ABOUT SPECIFICATION PAGE */}
                             {currentTab === 'about' && (
                                 <div className="max-w-2xl py-6 font-sans">
                                     <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-ytBorder pb-2">About 4KWALLPATEER Framework</h1>
@@ -514,35 +512,35 @@
                                 </div>
                             )}
 
-                            {/* VIEW ROUTE D: ADMINISTRATIVE JSON GENERATION & UPLOAD CENTER */}
+                            {/* VIEW ROUTE D: ADMINISTRATIVE JSON SYNC CREATOR UPLOAD CENTER */}
                             {currentTab === 'admin' && (
                                 <div className="max-w-2xl py-6 font-sans">
                                     <h1 className="text-2xl font-black uppercase tracking-tight mb-2 border-b border-ytBorder pb-2">Admin Upload Dashboard Center</h1>
-                                    <p className="text-xs text-gray-500 mb-6 uppercase tracking-wider">Generate formatted payload blocks to update your GitHub `wallpapers.json` source array instantly.</p>
+                                    <p className="text-xs text-gray-500 mb-6 uppercase tracking-wider">Generate structured formatting payload blocks to update your GitHub `wallpapers.json` source array instantly.</p>
                                     
                                     <form onSubmit={handleGenerateJson} className="space-y-4 bg-ytLightGray/50 border border-ytBorder p-6 rounded-2xl shadow-inner">
                                         <div>
                                             <label className="block text-xs font-bold uppercase tracking-wider text-ytBlack mb-1">Wallpaper Creative Title</label>
-                                            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g., Cyberpunk Neon Grid Vista" className="w-full text-xs font-semibold p-2.5 rounded-xl border border-ytBorder focus:outline-none focus:border-gray-400 text-ytBlack" />
+                                            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g., Minimal Obsidian Desktop Array" className="w-full text-xs font-semibold p-2.5 rounded-xl border border-ytBorder focus:outline-none focus:border-gray-400 text-ytBlack" />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold uppercase tracking-wider text-ytBlack mb-1">Raw Image Absolute URL Target</label>
-                                            <input type="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://images.unsplash.com/... or cloud storage resource link" className="w-full text-xs font-mono p-2.5 rounded-xl border border-ytBorder focus:outline-none focus:border-gray-400 text-ytBlack" />
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-ytBlack mb-1">Absolute Image Web Link URL</label>
+                                            <input type="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://images.unsplash.com/... or cloud storage asset link" className="w-full text-xs font-mono p-2.5 rounded-xl border border-ytBorder focus:outline-none focus:border-gray-400 text-ytBlack" />
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-bold uppercase tracking-wider text-ytBlack mb-1">System Filter Category</label>
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-ytBlack mb-1">System Target Filter Category</label>
                                             <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full text-xs font-bold p-2.5 bg-ytWhite rounded-xl border border-ytBorder text-ytBlack focus:outline-none">
                                                 {CATEGORIES.filter(c => c !== 'All').map(cat => <option key={cat} value={cat}>{cat}</option>)}
                                             </select>
                                         </div>
-                                        <button type="submit" className="px-6 py-2.5 bg-ytBlack text-ytWhite font-black uppercase text-xs tracking-widest rounded-xl hover:bg-gray-800 transition shadow">Generate Asset Object</button>
+                                        <button type="submit" className="px-6 py-2.5 bg-ytBlack text-ytWhite font-black uppercase text-xs tracking-widest rounded-xl hover:bg-gray-800 transition shadow">Generate Asset Code Block</button>
                                     </form>
 
                                     {generatedJson && (
-                                        <div className="mt-6 space-y-2 animate-fadeIn">
-                                            <div className="flex items-center justify-between">
+                                        <div className="mt-6 space-y-2">
+                                            <div className="flex items-center justify-between select-none">
                                                 <h3 className="text-xs font-black uppercase tracking-wider text-gray-400">Production Code Block Output</h3>
-                                                <button onClick={() => { navigator.clipboard.writeText(generatedJson); alert('JSON asset block copied to clipboard!'); }} className="text-xs font-bold text-blue-600 hover:underline">Copy Generated JSON</button>
+                                                <button onClick={() => { navigator.clipboard.writeText(generatedJson); alert('Asset object copied! Paste this block into your GitHub wallpapers.json list.'); }} className="text-xs font-bold text-blue-600 hover:underline">Copy Formatted Object</button>
                                             </div>
                                             <pre className="p-4 bg-ytBlack text-green-400 rounded-2xl font-mono text-xs overflow-x-auto shadow-xl border border-gray-800 max-h-60 leading-relaxed">{generatedJson}</pre>
                                         </div>
@@ -553,25 +551,25 @@
                         </main>
                     </div>
 
-                    <!-- USER IDENTITY SECURITY MODAL SYSTEM OVERLAY -->
+                    {/* IDENTITY VALIDATION SECURITY MODAL OVERLAY */}
                     {authModalOpen && (
-                        <div className="fixed inset-0 bg-ytBlack/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans select-none animate-fadeIn">
+                        <div className="fixed inset-0 bg-ytBlack/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans select-none">
                             <div className="bg-ytWhite border border-ytBorder rounded-3xl w-full max-w-sm p-6 shadow-2xl relative">
                                 <button onClick={() => setAuthModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-ytBlack transition">
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                 </button>
                                 <h2 className="text-lg font-black uppercase tracking-tight mb-1 text-ytBlack">{authMode === 'login' ? 'Sign In' : 'Create Account'}</h2>
-                                <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-4">Access your personal wallpaper cloud metrics library repository.</p>
+                                <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-4">Access your premium library configurations.</p>
                                 
                                 <form onSubmit={handleAuthSubmit} className="space-y-3.5">
-                                    <input type="email" placeholder="Enter security email profile" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full text-xs font-semibold p-3 border border-ytBorder rounded-xl bg-ytLightGray/30 text-ytBlack focus:outline-none focus:border-gray-400" />
-                                    <input type="password" placeholder="Access token password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full text-xs font-semibold p-3 border border-ytBorder rounded-xl bg-ytLightGray/30 text-ytBlack focus:outline-none focus:border-gray-400" />
-                                    <button type="submit" className="w-full py-3 bg-ytBlack text-ytWhite font-black text-xs uppercase tracking-widest rounded-xl hover:bg-gray-800 transition shadow">Verify Identity Token</button>
+                                    <input type="email" placeholder="Enter secure user profile email" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full text-xs font-semibold p-3 border border-ytBorder rounded-xl bg-ytLightGray/30 text-ytBlack focus:outline-none focus:border-gray-400" />
+                                    <input type="password" placeholder="Access verification token" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full text-xs font-semibold p-3 border border-ytBorder rounded-xl bg-ytLightGray/30 text-ytBlack focus:outline-none focus:border-gray-400" />
+                                    <button type="submit" className="w-full py-3 bg-ytBlack text-ytWhite font-black text-xs uppercase tracking-widest rounded-xl hover:bg-gray-800 transition shadow">Verify Profiling Details</button>
                                 </form>
                                 
                                 <div className="mt-4 pt-4 border-t border-ytBorder text-center">
                                     <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-xs font-bold text-blue-600 hover:underline">
-                                        {authMode === 'login' ? "Need a validation profile? Register here" : "Have an active security account? Sign In"}
+                                        {authMode === 'login' ? "Register a standard email layout profile" : "Have active credentials? Sign In"}
                                     </button>
                                 </div>
                             </div>
