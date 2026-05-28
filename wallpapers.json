@@ -1,0 +1,26 @@
+[
+    {
+        "title": "Minimalist Nordic Peak Layout",
+        "category": "Nature",
+        "image_url": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?w=1200",
+        "slug": "nordic-peak-setup"
+    },
+    {
+        "title": "Cyberpunk Neon Rainfall Alley",
+        "category": "Cyberpunk",
+        "image_url": "https://images.unsplash.com/photo-1515621061946-eff1c2a352bd?w=1200",
+        "slug": "cyberpunk-rainfall"
+    },
+    {
+        "title": "Deep Obsidian AMOLED Geometry",
+        "category": "AMOLED",
+        "image_url": "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200",
+        "slug": "obsidian-amoled"
+    },
+    {
+        "title": "Vector Abstract Desktop Wave",
+        "category": "Abstract",
+        "image_url": "https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=1200",
+        "slug": "abstract-desktop-wave"
+    }
+]
