@@ -1,0 +1,5 @@
+// Initialize and export the Supabase Client connection engine
+const supabaseUrl = 'https://nqwbjenjaizzzqhntfgg.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xd2JqZW5qYWl6enpxaG50ZmdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MDMwMTUsImV4cCI6MjA5NTM3OTAxNX0.zsGQxATnWEbvOgK6m5KfVNy396soAYiKTFTW53U2BcE';
+
+export const supabaseClient = supabase.createClient(https://nqwbjenjaizzzqhntfgg.supabase.co, eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5xd2JqZW5qYWl6enpxaG50ZmdnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4MDMwMTUsImV4cCI6MjA5NTM3OTAxNX0.zsGQxATnWEbvOgK6m5KfVNy396soAYiKTFTW53U2BcE);
