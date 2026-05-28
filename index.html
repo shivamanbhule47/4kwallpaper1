@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>4KWALLPATEER | Premium HD Minimalist Gallery</title>
-    <meta name="description" content="Premium YouTube-style UI layout for minimalist 4K wallpaper discoverability. High-speed responsive masonry layout with active modal previews.">
+    <title>4KWALLPATEER | Premium HD Minimalist Gallery Cluster</title>
+    <meta name="description" content="Premium YouTube-inspired light mode network architecture for ultra 4K wallpaper discoverability.">
     
+    <!-- Tailwind CSS Engine -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -23,6 +24,7 @@
         }
     </script>
 
+    <!-- Structural CSS Definitions -->
     <style>
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -41,6 +43,7 @@
         }
     </style>
 
+    <!-- Production Runtime Infrastructure CDNs -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -51,9 +54,9 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useMemo } = React;
 
-        // SUPABASE BACKEND ROUTER VARIABLES
+        // GLOBAL CONFIGURATION SYSTEM KEYWORDS
         const SUPABASE_URL = 'YOUR_SUPABASE_URL';
         const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
         const GITHUB_JSON_URL = 'https://raw.githubusercontent.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME/main/wallpapers.json';
@@ -67,16 +70,30 @@
         const ASPECT_RATIOS = ["aspect-video", "aspect-[9/16]", "aspect-square", "aspect-[4/3]", "aspect-[3/2]"];
 
         function App() {
+            // General Display States
             const [wallpapers, setWallpapers] = useState([]);
-            const [currentTab, setCurrentTab] = useState('home'); 
+            const [currentTab, setCurrentTab] = useState('home'); // home, trending, library, about, admin
             const [selectedCategory, setSelectedCategory] = useState('All');
             const [searchQuery, setSearchQuery] = useState('');
             const [sidebarOpen, setSidebarOpen] = useState(true);
             const [loading, setLoading] = useState(false);
-            
-            // Interactive Modal Preview Tracking States
             const [activePreview, setActivePreview] = useState(null);
+
+            // User Profile, Library Storage & Authentication States
+            const [user, setUser] = useState(null);
+            const [authModalOpen, setAuthModalOpen] = useState(false);
+            const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+            const [authEmail, setAuthEmail] = useState('');
+            const [authPassword, setAuthPassword] = useState('');
+            const [authMode, setAuthMode] = useState('login'); // login | register
             const [userLikes, setUserLikes] = useState([]);
+            const [userDownloads, setUserDownloads] = useState([]);
+
+            // Admin Content Upload Panel Form Generation States
+            const [newTitle, setNewTitle] = useState('');
+            const [newUrl, setNewUrl] = useState('');
+            const [newCategory, setNewCategory] = useState('Minimalist');
+            const [generatedJson, setGeneratedJson] = useState('');
 
             const fallbackData = [
                 { id: 'w1', title: 'Geometric Prism Array Layer', category: 'Abstract', image_url: 'https://images.unsplash.com/photo-1634017839464-5c339ebe3cb4?w=1400', views: 4290, slug: 'prism-array' },
@@ -87,16 +104,68 @@
                 { id: 'w6', title: 'Anime Skyline Sunset Vista', category: 'Anime', image_url: 'https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1400', views: 7100, slug: 'anime-skyline' }
             ];
 
-            const fetchWallpapers = async (search = '', category = 'All', tab = 'home') => {
+            // Setup Authentication Observers & Local Storage Syncing
+            useEffect(() => {
+                setUserLikes(JSON.parse(localStorage.getItem('user_likes') || '[]'));
+                setUserDownloads(JSON.parse(localStorage.getItem('user_downloads') || '[]'));
+
+                if (supabase) {
+                    supabase.auth.getSession().then(({ data: { session } }) => {
+                        if (session) setUser(session.user);
+                    });
+                    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+                        setUser(session ? session.user : null);
+                    });
+                    return () => subscription.unsubscribe();
+                } else {
+                    // Fallback Storage Simulation Session for Offline testing
+                    const simulatedUser = localStorage.getItem('sim_user');
+                    if (simulatedUser) setUser({ email: simulatedUser, id: 'sim-id-123' });
+                }
+            }, []);
+
+            const handleAuthSubmit = async (e) => {
+                e.preventDefault();
+                if (!authEmail || !authPassword) return;
+
+                if (supabase) {
+                    try {
+                        if (authMode === 'register') {
+                            const { data, error } = await supabase.auth.signUp({ email: authEmail, password: authPassword });
+                            if (error) throw error;
+                            alert('Registration verified! Access granted.');
+                        } else {
+                            const { data, error } = await supabase.auth.signInWithPassword({ email: authEmail, password: authPassword });
+                            if (error) throw error;
+                        }
+                        setAuthModalOpen(false);
+                    } catch (error) { alert(error.message); }
+                } else {
+                    // Caching Simulation Mechanism for standalone GitHub serving paths
+                    localStorage.setItem('sim_user', authEmail);
+                    setUser({ email: authEmail, id: 'sim-id-123' });
+                    setAuthModalOpen(false);
+                    alert(`Simulated auth channel active as: ${authEmail}`);
+                }
+            };
+
+            const handleLogout = async () => {
+                if (supabase) await supabase.auth.signOut();
+                localStorage.removeItem('sim_user');
+                setUser(null);
+                setProfileDropdownOpen(false);
+                setCurrentTab('home');
+            };
+
+            const fetchInitialWallpapers = async () => {
                 setLoading(true);
                 let assets = [];
-
                 try {
                     if (GITHUB_JSON_URL && !GITHUB_JSON_URL.includes('YOUR_GITHUB_USERNAME')) {
                         const response = await fetch(GITHUB_JSON_URL);
                         if (response.ok) assets = await response.json();
                     }
-                } catch (err) { console.warn("GitHub content channel initialization bypassed."); }
+                } catch (err) { console.warn("GitHub JSON streaming bypassed."); }
 
                 if (supabase) {
                     try {
@@ -107,36 +176,51 @@
 
                 if (assets.length === 0) assets = [...fallbackData];
 
-                if (category !== 'All') assets = assets.filter(w => w.category.toLowerCase() === category.toLowerCase());
-                if (search) assets = assets.filter(w => w.title.toLowerCase().includes(search.toLowerCase()));
-
-                if (tab === 'trending') {
-                    assets.sort((a, b) => (b.views || 0) - (a.views || 0));
-                } else if (tab === 'downloads') {
-                    const localSaved = JSON.parse(localStorage.getItem('downloads') || '[]');
-                    assets = assets.filter(w => localSaved.includes(w.id || w.slug));
-                }
-
+                // Map static structured metrics parameters
                 const formatted = assets.map((item, index) => ({
                     ...item,
                     assignedRatio: ASPECT_RATIOS[index % ASPECT_RATIOS.length],
-                    views: item.views || Math.floor(Math.random() * 3000) + 200,
-                    likesCount: item.likesCount || Math.floor(Math.random() * 500) + 45
+                    views: item.views || (1020 + (index * 240)),
+                    likesCount: item.likesCount || (45 + (index * 12))
                 }));
-
                 setWallpapers(formatted);
                 setLoading(false);
             };
 
-            useEffect(() => {
-                fetchWallpapers(searchQuery, selectedCategory, currentTab);
-                setUserLikes(JSON.parse(localStorage.getItem('user_likes') || '[]'));
-            }, [selectedCategory, currentTab]);
+            useEffect(() => { fetchInitialWallpapers(); }, []);
 
-            const handleSearch = (e) => {
-                e.preventDefault();
-                fetchWallpapers(searchQuery, selectedCategory, currentTab);
-            };
+            // HIGH-PERFORMANCE MULTI-PARAMETER LIVE FILTERING ALGORITHM
+            const filteredWallpapers = useMemo(() => {
+                let results = [...wallpapers];
+
+                // Filter by horizontal category pill parameters
+                if (selectedCategory !== 'All') {
+                    results = results.filter(w => w.category.toLowerCase() === selectedCategory.toLowerCase());
+                }
+
+                // Enhanced Search Algorithm: Matches Titles, Categories, and Identifier Slugs
+                if (searchQuery) {
+                    const cleanQuery = searchQuery.toLowerCase().trim();
+                    results = results.filter(w => 
+                        w.title.toLowerCase().includes(cleanQuery) ||
+                        w.category.toLowerCase().includes(cleanQuery) ||
+                        (w.slug && w.slug.toLowerCase().includes(cleanQuery))
+                    );
+                }
+
+                // Process contextual visual tab routes
+                if (currentTab === 'trending') {
+                    results.sort((a, b) => b.views - a.views);
+                } else if (currentTab === 'library') {
+                    // Strict User Library isolation criteria
+                    results = results.filter(w => 
+                        userLikes.includes(w.id || w.slug) || 
+                        userDownloads.includes(w.id || w.slug)
+                    );
+                }
+
+                return results;
+            }, [wallpapers, selectedCategory, searchQuery, currentTab, userLikes, userDownloads]);
 
             const toggleLike = (id) => {
                 let currentLikes = [...userLikes];
@@ -148,7 +232,7 @@
                 setUserLikes(currentLikes);
                 localStorage.setItem('user_likes', JSON.stringify(currentLikes));
                 
-                setWallpapers(wallpapers.map(w => {
+                setWallpapers(prev => prev.map(w => {
                     if ((w.id === id || w.slug === id)) {
                         return { ...w, likesCount: currentLikes.includes(id) ? w.likesCount + 1 : w.likesCount - 1 };
                     }
@@ -163,34 +247,53 @@
                 }
             };
 
-            const executeDownload = (wallpaper) => {
-                let tracks = JSON.parse(localStorage.getItem('downloads') || '[]');
+            const triggerDownload = (wallpaper) => {
                 const identity = wallpaper.id || wallpaper.slug;
-                if (!tracks.includes(identity)) {
-                    tracks.push(identity);
-                    localStorage.setItem('downloads', JSON.stringify(tracks));
+                let currentDownloads = [...userDownloads];
+                if (!currentDownloads.includes(identity)) {
+                    currentDownloads.push(identity);
+                    setUserDownloads(currentDownloads);
+                    localStorage.setItem('user_downloads', JSON.stringify(currentDownloads));
                 }
+
                 const link = document.createElement('a');
                 link.href = wallpaper.image_url;
                 link.target = "_blank";
-                link.download = `${wallpaper.slug || 'download-4k'}.jpg`;
+                link.download = `${wallpaper.slug || 'premium-hd'}.jpg`;
                 link.click();
             };
 
-            // Sidebar recommendation algorithm configuration filtering out the currently active item
+            const handleGenerateJson = (e) => {
+                e.preventDefault();
+                if (!newTitle || !newUrl) return alert("Please populate all parameters.");
+                const generatedSlug = newTitle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+                
+                const newAssetObject = {
+                    title: newTitle,
+                    category: newCategory,
+                    image_url: newUrl,
+                    slug: generatedSlug,
+                    views: Math.floor(Math.random() * 200) + 15,
+                    likesCount: Math.floor(Math.random() * 10) + 2
+                };
+
+                setGeneratedJson(JSON.stringify(newAssetObject, null, 4));
+            };
+
             const relatedWallpapers = activePreview 
-                ? wallpapers.filter(w => w.category === activePreview.category && (w.id !== activePreview.id || w.slug !== activePreview.slug))
+                ? wallpapers.filter(w => w.category === activePreview.category && (w.id !== activePreview.id && w.slug !== activePreview.slug))
                 : [];
 
             return (
-                <div className="flex flex-col min-h-screen bg-ytWhite text-ytBlack">
+                <div className="flex flex-col min-h-screen bg-ytWhite text-ytBlack relative">
                     
-                    <header className="h-14 bg-ytWhite border-b border-ytBorder flex items-center justify-between px-4 sticky top-0 z-50">
+                    <!-- TOP FIXED NAVIGATION HEADER -->
+                    <header className="h-14 bg-ytWhite border-b border-ytBorder flex items-center justify-between px-4 sticky top-0 z-50 select-none">
                         <div className="flex items-center space-x-3">
-                            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-ytLightGray rounded-full transition">
+                            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-ytLightGray rounded-full transition active:bg-ytHoverGray">
                                 <svg className="w-5 h-5 text-ytBlack" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
                             </button>
-                            <div onClick={() => { setCurrentTab('home'); setActivePreview(null); }} className="flex items-center space-x-2 cursor-pointer select-none group">
+                            <div onClick={() => { setCurrentTab('home'); setActivePreview(null); }} className="flex items-center space-x-2 cursor-pointer group">
                                 <div className="falcon-animation w-7 h-7 bg-ytBlack rounded-lg flex items-center justify-center transition">
                                     <svg className="w-4 h-4 text-ytWhite transform -rotate-12" viewBox="0 0 24 24" fill="currentColor">
                                         <path d="M12 2L9 9H3L8 13L6 20L12 16L18 20L16 13L21 9H15L12 2Z"/>
@@ -200,49 +303,99 @@
                             </div>
                         </div>
 
-                        <form onSubmit={handleSearch} className="flex items-center w-full max-w-xl mx-4">
+                        <!-- LIVE ADVANCED SEARCH ARCHITECTURE -->
+                        <div className="flex items-center w-full max-w-xl mx-4">
                             <div className="flex w-full bg-ytWhite border border-ytBorder rounded-full overflow-hidden focus-within:border-gray-400 focus-within:shadow-inner transition">
                                 <input 
                                     type="text" 
-                                    placeholder="Search creative asset posts..." 
+                                    placeholder="Search by title, category context, or tags layout..." 
                                     value={searchQuery}
-                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    onChange={(e) => { setSearchQuery(e.target.value); if(activePreview) setActivePreview(null); }}
                                     className="w-full bg-transparent px-5 py-1.5 text-sm text-ytBlack focus:outline-none placeholder-gray-400"
                                 />
-                                <button type="submit" className="bg-ytLightGray border-l border-ytBorder px-6 py-1.5 hover:bg-ytHoverGray transition">
-                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-                                </button>
+                                <div className="bg-ytLightGray border-l border-ytBorder px-6 py-1.5 flex items-center text-gray-500">
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                </div>
                             </div>
-                        </form>
-                        <div className="w-8 h-8 rounded-full bg-ytBlack text-ytWhite flex items-center justify-center font-bold text-xs select-none">A</div>
+                        </div>
+
+                        <!-- USER PROFILE AUTHENTICATION ROUTER INTERFACE -->
+                        <div className="relative">
+                            {user ? (
+                                <button 
+                                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                                    className="w-8 h-8 rounded-full bg-ytBlack text-ytWhite flex items-center justify-center font-bold text-xs shadow hover:scale-105 transition"
+                                >
+                                    {user.email.substring(0, 2).toUpperCase()}
+                                </button>
+                            ) : (
+                                <button 
+                                    onClick={() => setAuthModalOpen(true)}
+                                    className="flex items-center space-x-1.5 px-3 py-1.5 border border-blue-600 text-blue-600 text-xs font-bold rounded-full hover:bg-blue-50 transition uppercase tracking-wider"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                                    <span>Sign In</span>
+                                </button>
+                            )}
+
+                            <!-- YOUTUBE-STYLE ACCOUNT MENU DROPDOWN PANEL -->
+                            {profileDropdownOpen && user && (
+                                <div className="absolute right-0 mt-2 w-56 bg-ytWhite border border-ytBorder rounded-2xl shadow-xl py-2 z-50 font-sans">
+                                    <div className="px-4 py-2 border-b border-ytBorder">
+                                        <p className="text-xs text-gray-400 font-medium">Signed in as</p>
+                                        <p className="text-xs font-bold text-ytBlack truncate">{user.email}</p>
+                                    </div>
+                                    <button onClick={() => { setCurrentTab('library'); setProfileDropdownOpen(false); setActivePreview(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-ytBlack hover:bg-ytLightGray flex items-center space-x-2">
+                                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+                                        <span>My Saved & Library</span>
+                                    </button>
+                                    <button onClick={() => { setCurrentTab('admin'); setProfileDropdownOpen(false); setActivePreview(null); }} className="w-full text-left px-4 py-2 text-xs font-bold text-ytBlack hover:bg-ytLightGray flex items-center space-x-2">
+                                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 13h6m-3-3v6m5 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                                        <span>Admin Upload Center</span>
+                                    </button>
+                                    <button onClick={handleLogout} className="w-full text-left px-4 py-2 text-xs font-bold text-red-600 hover:bg-red-50 flex items-center space-x-2 border-t border-ytBorder mt-1">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                                        <span>Sign Out Account</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     </header>
 
                     <div className="flex flex-1">
-                        <aside className={`${sidebarOpen ? 'w-60 px-2' : 'w-0 -translate-x-full'} transition-all duration-200 bg-ytWhite border-r border-ytBorder flex flex-col pt-3 fixed md:sticky top-14 h-[calc(100vh-56px)] z-40 overflow-hidden`}>
+                        <!-- APP SIDEBAR CONTROLS -->
+                        <aside className={`${sidebarOpen ? 'w-60 px-2' : 'w-0 -translate-x-full'} transition-all duration-200 bg-ytWhite border-r border-ytBorder flex flex-col pt-3 fixed md:sticky top-14 h-[calc(100vh-56px)] z-40 overflow-hidden select-none`}>
                             <nav className="space-y-1">
-                                <button onClick={() => { setCurrentTab('home'); setActivePreview(null); }} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'home' && !activePreview ? 'bg-ytLightGray' : 'hover:bg-ytLightGray/60'}`}>
+                                <button onClick={() => { setCurrentTab('home'); setActivePreview(null); }} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'home' && !activePreview ? 'bg-ytLightGray text-ytBlack' : 'text-ytBlack hover:bg-ytLightGray/60'}`}>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
                                     <span>Home Feed</span>
                                 </button>
-                                <button onClick={() => { setCurrentTab('trending'); setActivePreview(null); }} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'trending' ? 'bg-ytLightGray' : 'hover:bg-ytLightGray/60'}`}>
+                                <button onClick={() => { setCurrentTab('trending'); setActivePreview(null); }} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'trending' ? 'bg-ytLightGray text-ytBlack' : 'text-ytBlack hover:bg-ytLightGray/60'}`}>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
                                     <span>Trending</span>
                                 </button>
-                                <button onClick={() => { setCurrentTab('downloads'); setActivePreview(null); }} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'downloads' ? 'bg-ytLightGray' : 'hover:bg-ytLightGray/60'}`}>
+                                <button onClick={() => { setCurrentTab('library'); setActivePreview(null); }} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'library' ? 'bg-ytLightGray text-ytBlack' : 'text-ytBlack hover:bg-ytLightGray/60'}`}>
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                    <span>Library</span>
+                                    <span>My Library</span>
                                 </button>
                             </nav>
+                            <div className="mt-6 border-t border-ytBorder pt-4 px-4 space-y-2.5">
+                                <button onClick={() => { setCurrentTab('about'); setActivePreview(null); }} className={`block text-xs font-semibold text-left w-full uppercase tracking-wider ${currentTab === 'about' ? 'text-blue-600' : 'text-gray-500 hover:text-ytBlack'}`}>About System</button>
+                            </div>
+                            <div className="mt-auto p-4 text-[10px] text-gray-400 font-mono select-none">© 2026 4KWALLPATEER</div>
                         </aside>
 
+                        <!-- COMPONENT LAYOUT MANAGER CONTAINER -->
                         <main className="flex-1 min-w-0 px-4 md:px-8 py-3 bg-ytWhite">
                             
-                            {!activePreview ? (
+                            {/* VIEW ROUTE A: HOME FEED / TRENDING FEED / USER LIBRARY */}
+                            {['home', 'trending', 'library'].includes(currentTab) && !activePreview && (
                                 <>
-                                    <div className="flex items-center space-x-2.5 overflow-x-auto no-scrollbar pb-3 sticky top-14 bg-ytWhite z-30">
+                                    {/* HORIZONTAL CATEGORY PILL SELECTORS */}
+                                    <div className="flex items-center space-x-2.5 overflow-x-auto no-scrollbar pb-3 sticky top-14 bg-ytWhite z-30 select-none">
                                         {CATEGORIES.map(cat => (
                                             <button 
-                                                key={cat}
+                                                key={cat} 
                                                 onClick={() => setSelectedCategory(cat)}
                                                 className={`px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${selectedCategory === cat ? 'bg-ytBlack text-ytWhite' : 'bg-ytLightGray text-ytBlack hover:bg-ytHoverGray'}`}
                                             >
@@ -251,8 +404,9 @@
                                         ))}
                                     </div>
 
+                                    {/* MULTI-RATIO DESIGN FEED GRID SYSTEM */}
                                     <div className="masonry-grid mt-4">
-                                        {wallpapers.map(wall => (
+                                        {filteredWallpapers.map(wall => (
                                             <div key={wall.id || wall.slug} onClick={() => setActivePreview(wall)} className="masonry-item bg-ytWhite border border-ytBorder rounded-2xl overflow-hidden group hover:shadow-md hover:border-gray-300 transition cursor-pointer flex flex-col">
                                                 <div className={`relative overflow-hidden bg-ytLightGray w-full ${wall.assignedRatio}`}>
                                                     <img src={wall.image_url} alt={wall.title} loading="lazy" className="w-full h-full object-cover transform group-hover:scale-[1.015] transition duration-500"/>
@@ -261,25 +415,30 @@
                                                     <div className="w-8 h-8 rounded-full bg-ytLightGray flex-shrink-0 flex items-center justify-center font-mono font-black text-[9px] border border-ytBorder text-ytBlack">4K</div>
                                                     <div className="flex-1 min-w-0">
                                                         <h2 className="text-xs font-bold text-ytBlack truncate uppercase tracking-tight">{wall.title}</h2>
-                                                        <p className="text-[10px] text-gray-500 font-semibold mt-0.5 uppercase tracking-wide">{wall.category} Setup</p>
+                                                        <p className="text-[10px] text-gray-500 font-semibold mt-0.5 uppercase tracking-wide">{wall.category} Layout</p>
                                                         <p className="text-[10px] text-gray-400 font-mono mt-0.5">{wall.views.toLocaleString()} views</p>
                                                     </div>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
+
+                                    {filteredWallpapers.length === 0 && (
+                                        <div className="text-gray-400 text-xs mt-12 text-center py-24 border-2 border-dashed border-ytBorder rounded-2xl uppercase tracking-widest font-mono select-none">
+                                            {currentTab === 'library' ? "No saved or downloaded wallpapers found inside your library." : "No matching catalog elements found."}
+                                        </div>
+                                    )}
                                 </>
-                            ) : (
-                                
-                                <div className="flex flex-col lg:flex-row gap-6 mt-2 max-w-7xl mx-auto">
+                            )}
+
+                            {/* VIEW ROUTE B: WATCH PAGE INSPIRED HIGH RESOLUTION LIVE PREVIEW MODE */}
+                            {activePreview && (
+                                <div className="flex flex-col lg:flex-row gap-6 mt-2 max-w-7xl mx-auto animate-fadeIn">
                                     
+                                    <!-- THEATER VIEW SCREEN PORT -->
                                     <div className="flex-1 lg:max-w-[70%]">
                                         <div className="bg-ytLightGray rounded-2xl overflow-hidden border border-ytBorder shadow-sm relative">
-                                            <img 
-                                                src={activePreview.image_url} 
-                                                alt={activePreview.title} 
-                                                className="w-full h-auto max-h-[75vh] object-contain mx-auto"
-                                            />
+                                            <img src={activePreview.image_url} alt={activePreview.title} className="w-full h-auto max-h-[75vh] object-contain mx-auto"/>
                                         </div>
                                         
                                         <h1 className="text-lg md:text-xl font-black uppercase tracking-tight mt-4 text-ytBlack">{activePreview.title}</h1>
@@ -288,12 +447,13 @@
                                             <div className="flex items-center space-x-3">
                                                 <div className="w-10 h-10 rounded-full bg-ytBlack text-ytWhite flex items-center justify-center font-mono font-black text-xs">HQ</div>
                                                 <div>
-                                                    <p className="text-xs font-bold uppercase">{activePreview.category} Creator Space</p>
-                                                    <p className="text-[11px] text-gray-400 font-mono">{activePreview.views.toLocaleString()} asset distributions</p>
+                                                    <p className="text-xs font-bold uppercase">{activePreview.category} Setup Node</p>
+                                                    <p className="text-[11px] text-gray-400 font-mono">{activePreview.views.toLocaleString()} distribution stream views</p>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center space-x-2">
+                                            <!-- THEATER CONTROLS INTERACTION MATRICES -->
+                                            <div className="flex items-center space-x-2 select-none">
                                                 <button 
                                                     onClick={() => toggleLike(activePreview.id || activePreview.slug)}
                                                     className={`flex items-center space-x-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition ${userLikes.includes(activePreview.id || activePreview.slug) ? 'bg-ytBlack text-ytWhite' : 'bg-ytLightGray text-ytBlack hover:bg-ytHoverGray'}`}
@@ -303,27 +463,23 @@
                                                 </button>
 
                                                 <button 
-                                                    onClick={() => executeDownload(activePreview)}
-                                                    className="flex items-center space-x-2 px-5 py-2 bg-ytBlack text-ytWhite hover:bg-gray-800 transition text-xs font-bold uppercase tracking-widest rounded-full"
+                                                    onClick={() => triggerDownload(activePreview)}
+                                                    className="flex items-center space-x-2 px-5 py-2 bg-ytBlack text-ytWhite hover:bg-gray-800 transition text-xs font-bold uppercase tracking-widest rounded-full shadow"
                                                 >
                                                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
-                                                    <span>Download 4K Source</span>
+                                                    <span>Download Asset</span>
                                                 </button>
 
-                                                <button 
-                                                    onClick={() => setActivePreview(null)}
-                                                    className="p-2 bg-ytLightGray hover:bg-ytHoverGray rounded-full text-ytBlack transition"
-                                                    title="Close theater view"
-                                                >
+                                                <button onClick={() => setActivePreview(null)} className="p-2 bg-ytLightGray hover:bg-ytHoverGray rounded-full text-ytBlack transition">
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
 
+                                    <!-- SIDEBAR RECOMMENDED LINK STREAM MATCH ALGORITHM -->
                                     <div className="flex-1 lg:max-w-[30%] space-y-3">
-                                        <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 border-b border-ytBorder pb-1.5">Up Next: Related Discoveries</h3>
-                                        
+                                        <h3 className="text-xs font-black uppercase tracking-widest text-gray-400 border-b border-ytBorder pb-1.5 select-none">Related Asset Configurations</h3>
                                         <div className="space-y-3 max-h-[85vh] overflow-y-auto pr-1 no-scrollbar">
                                             {relatedWallpapers.map(rel => (
                                                 <div 
@@ -334,7 +490,6 @@
                                                     <div className="w-32 h-20 bg-ytLightGray rounded-lg overflow-hidden flex-shrink-0 relative">
                                                         <img src={rel.image_url} alt={rel.title} className="w-full h-full object-cover"/>
                                                     </div>
-                                                    
                                                     <div className="flex-1 min-w-0 flex flex-col justify-center">
                                                         <h4 className="text-xs font-bold text-ytBlack line-clamp-2 uppercase tracking-tight group-hover:text-gray-700 transition">{rel.title}</h4>
                                                         <p className="text-[10px] text-gray-500 font-medium mt-0.5 uppercase">{rel.category}</p>
@@ -342,20 +497,87 @@
                                                     </div>
                                                 </div>
                                             ))}
-
                                             {relatedWallpapers.length === 0 && (
-                                                <div className="text-gray-400 text-[11px] uppercase tracking-wide py-6 text-center font-mono border border-dashed border-ytBorder rounded-xl">
-                                                    End of system streaming category chain.
-                                                </div>
+                                                <div className="text-gray-400 text-[11px] uppercase tracking-wide py-6 text-center font-mono border border-dashed border-ytBorder rounded-xl select-none">End of linked category configuration tree.</div>
                                             )}
                                         </div>
                                     </div>
+                                </div>
+                            )}
 
+                            {/* VIEW ROUTE C: SYSTEM SPECIFICATION ABOUT PAGE */}
+                            {currentTab === 'about' && (
+                                <div className="max-w-2xl py-6 font-sans">
+                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-ytBorder pb-2">About 4KWALLPATEER Framework</h1>
+                                    <p className="text-gray-600 text-sm leading-relaxed mb-4">Welcome to your high-performance, responsive 4K discovery web solution. Designed around modern fluid layout paradigms and visual grid rendering speeds, this application eliminates standard client-side tracking components to prioritize asset rendering fidelity.</p>
+                                    <p className="text-gray-600 text-sm leading-relaxed mb-4">Featuring real-time query parameter filtering across names, slugs, and categories, the site matches visual targets instantaneously. Authentication workflows handle local and distributed state properties securely, ensuring user libraries remain accurate across standard web session lifecycles.</p>
+                                </div>
+                            )}
+
+                            {/* VIEW ROUTE D: ADMINISTRATIVE JSON GENERATION & UPLOAD CENTER */}
+                            {currentTab === 'admin' && (
+                                <div className="max-w-2xl py-6 font-sans">
+                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-2 border-b border-ytBorder pb-2">Admin Upload Dashboard Center</h1>
+                                    <p className="text-xs text-gray-500 mb-6 uppercase tracking-wider">Generate formatted payload blocks to update your GitHub `wallpapers.json` source array instantly.</p>
+                                    
+                                    <form onSubmit={handleGenerateJson} className="space-y-4 bg-ytLightGray/50 border border-ytBorder p-6 rounded-2xl shadow-inner">
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-ytBlack mb-1">Wallpaper Creative Title</label>
+                                            <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="e.g., Cyberpunk Neon Grid Vista" className="w-full text-xs font-semibold p-2.5 rounded-xl border border-ytBorder focus:outline-none focus:border-gray-400 text-ytBlack" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-ytBlack mb-1">Raw Image Absolute URL Target</label>
+                                            <input type="url" value={newUrl} onChange={(e) => setNewUrl(e.target.value)} placeholder="https://images.unsplash.com/... or cloud storage resource link" className="w-full text-xs font-mono p-2.5 rounded-xl border border-ytBorder focus:outline-none focus:border-gray-400 text-ytBlack" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold uppercase tracking-wider text-ytBlack mb-1">System Filter Category</label>
+                                            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full text-xs font-bold p-2.5 bg-ytWhite rounded-xl border border-ytBorder text-ytBlack focus:outline-none">
+                                                {CATEGORIES.filter(c => c !== 'All').map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                                            </select>
+                                        </div>
+                                        <button type="submit" className="px-6 py-2.5 bg-ytBlack text-ytWhite font-black uppercase text-xs tracking-widest rounded-xl hover:bg-gray-800 transition shadow">Generate Asset Object</button>
+                                    </form>
+
+                                    {generatedJson && (
+                                        <div className="mt-6 space-y-2 animate-fadeIn">
+                                            <div className="flex items-center justify-between">
+                                                <h3 className="text-xs font-black uppercase tracking-wider text-gray-400">Production Code Block Output</h3>
+                                                <button onClick={() => { navigator.clipboard.writeText(generatedJson); alert('JSON asset block copied to clipboard!'); }} className="text-xs font-bold text-blue-600 hover:underline">Copy Generated JSON</button>
+                                            </div>
+                                            <pre className="p-4 bg-ytBlack text-green-400 rounded-2xl font-mono text-xs overflow-x-auto shadow-xl border border-gray-800 max-h-60 leading-relaxed">{generatedJson}</pre>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                         </main>
                     </div>
+
+                    <!-- USER IDENTITY SECURITY MODAL SYSTEM OVERLAY -->
+                    {authModalOpen && (
+                        <div className="fixed inset-0 bg-ytBlack/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 font-sans select-none animate-fadeIn">
+                            <div className="bg-ytWhite border border-ytBorder rounded-3xl w-full max-w-sm p-6 shadow-2xl relative">
+                                <button onClick={() => setAuthModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-ytBlack transition">
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                </button>
+                                <h2 className="text-lg font-black uppercase tracking-tight mb-1 text-ytBlack">{authMode === 'login' ? 'Sign In' : 'Create Account'}</h2>
+                                <p className="text-[11px] text-gray-400 uppercase tracking-wider mb-4">Access your personal wallpaper cloud metrics library repository.</p>
+                                
+                                <form onSubmit={handleAuthSubmit} className="space-y-3.5">
+                                    <input type="email" placeholder="Enter security email profile" value={authEmail} onChange={(e) => setAuthEmail(e.target.value)} className="w-full text-xs font-semibold p-3 border border-ytBorder rounded-xl bg-ytLightGray/30 text-ytBlack focus:outline-none focus:border-gray-400" />
+                                    <input type="password" placeholder="Access token password" value={authPassword} onChange={(e) => setAuthPassword(e.target.value)} className="w-full text-xs font-semibold p-3 border border-ytBorder rounded-xl bg-ytLightGray/30 text-ytBlack focus:outline-none focus:border-gray-400" />
+                                    <button type="submit" className="w-full py-3 bg-ytBlack text-ytWhite font-black text-xs uppercase tracking-widest rounded-xl hover:bg-gray-800 transition shadow">Verify Identity Token</button>
+                                </form>
+                                
+                                <div className="mt-4 pt-4 border-t border-ytBorder text-center">
+                                    <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} className="text-xs font-bold text-blue-600 hover:underline">
+                                        {authMode === 'login' ? "Need a validation profile? Register here" : "Have an active security account? Sign In"}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                 </div>
             );
         }
