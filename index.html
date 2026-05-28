@@ -4,27 +4,276 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4KWALLPATEER | Premium 4K Minimalist Wallpapers</title>
-    <meta name="description" content="Discover premium, original handcrafted 4K desktop and mobile wallpapers. Lightweight grid architecture designed for maximum performance and instant image discovery.">
+    <meta name="description" content="Discover original handcrafted 4K desktop and mobile wallpapers. Lightweight grid architecture designed for maximum performance, instant image discovery, and SEO ranking.">
     
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <link rel="stylesheet" href="./styles.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: { 
+                        pureBlack: '#0A0A0A', 
+                        zincDark: '#121214', 
+                        zincLight: '#1F1F23',
+                        brandOrange: '#F97316' /* Accent color inspired by your original logo */
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        .masonry-grid { column-gap: 1rem; }
+        @media (min-width: 640px) { .masonry-grid { column-count: 2; } }
+        @media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
+        @media (min-width: 1280px) { .masonry-grid { column-count: 4; } }
+        .masonry-item { break-inside: avoid; margin-bottom: 1rem; }
+    </style>
 
     <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
-<body class="antialiased select-none">
+<body class="bg-pureBlack text-white antialiased selection:bg-white selection:text-black">
 
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
-        import App from './app.js';
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // 1. SUPABASE CONNECTION CONFIGURATION
+        // Replace these placeholders with your actual Supabase API Credentials
+        const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+        const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+        
+        let supabase = null;
+        if (SUPABASE_URL !== 'YOUR_SUPABASE_URL') {
+            supabase = img_url = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+
+        const CATEGORIES = ["All", "Minimalist", "Dark Mode", "AMOLED", "Anime", "Cyberpunk", "Nature", "Abstract", "Vector"];
+
+        function App() {
+            const [wallpapers, setWallpapers] = useState([]);
+            const [currentTab, setCurrentTab] = useState('home'); // home, trending, downloads, about, cookies, disclaimer
+            const [selectedCategory, setSelectedCategory] = useState('All');
+            const [searchQuery, setSearchQuery] = useState('');
+            const [sidebarOpen, setSidebarOpen] = useState(true);
+            const [loading, setLoading] = useState(false);
+
+            // Mock Data auto-renders if Supabase isn't linked yet so your site never stays blank
+            const fallbackData = [
+                { id: '1', title: 'Minimalist Dark Void Layout', category: 'Minimalist', image_url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200', views: 1420, slug: 'dark-void' },
+                { id: '2', title: 'Cyberpunk Neon Street Matrix', category: 'Cyberpunk', image_url: 'https://images.unsplash.com/photo-1578894381163-e72c17f2d45f?w=1200', views: 3890, slug: 'neon-matrix' },
+                { id: '3', title: 'AMOLED Perfect Deep Space', category: 'AMOLED', image_url: 'https://images.unsplash.com/photo-1506318137071-a8e063b4bec0?w=1200', views: 940, slug: 'deep-space' }
+            ];
+
+            const fetchWallpapers = async (search = '', category = 'All', tab = 'home') => {
+                setLoading(true);
+                
+                if (!supabase) {
+                    // Render premium sample set if database is loading/not set
+                    let data = [...fallbackData];
+                    if (category !== 'All') data = data.filter(w => w.category === category);
+                    if (search) data = data.filter(w => w.title.toLowerCase().includes(search.toLowerCase()));
+                    if (tab === 'trending') data.sort((a,b) => b.views - a.views);
+                    setWallpapers(data);
+                    setLoading(false);
+                    return;
+                }
+
+                try {
+                    let query = supabase.from('wallpapers').select('*');
+                    if (search) query = query.ilike('title', `%${search}%`);
+                    if (category !== 'All') query = query.eq('category', category);
+                    
+                    if (tab === 'trending') {
+                        query = query.order('views', { ascending: false });
+                    } else {
+                        query = query.order('created_at', { ascending: false });
+                    }
+
+                    const { data, error } = await query;
+                    if (!error && data) {
+                        if (tab === 'downloads') {
+                            const localSaved = JSON.parse(localStorage.getItem('downloads') || '[]');
+                            setWallpapers(data.filter(w => localSaved.includes(w.id)));
+                        } else {
+                            setWallpapers(data);
+                        }
+                    }
+                } catch (e) {
+                    console.error(e);
+                }
+                setLoading(false);
+            };
+
+            useEffect(() => {
+                if (['home', 'trending', 'downloads'].includes(currentTab)) {
+                    fetchWallpapers(searchQuery, selectedCategory, currentTab);
+                }
+            }, [selectedCategory, currentTab]);
+
+            const handleSearchSubmit = (e) => {
+                e.preventDefault();
+                fetchWallpapers(searchQuery, selectedCategory, currentTab);
+            };
+
+            const triggerDownload = (wallpaper) => {
+                let tracks = JSON.parse(localStorage.getItem('downloads') || '[]');
+                if (!tracks.includes(wallpaper.id)) {
+                    tracks.push(wallpaper.id);
+                    localStorage.setItem('downloads', JSON.stringify(tracks));
+                }
+                
+                // Native direct asset download anchor injection
+                const link = document.createElement('a');
+                link.href = wallpaper.image_url;
+                link.target = "_blank";
+                link.download = `${wallpaper.slug}-4k.jpg`;
+                link.click();
+            };
+
+            return (
+                <div className="flex flex-col min-h-screen bg-pureBlack">
+                    {/* YOUTUBE TOP FIXED HEADER */}
+                    <header className="h-14 bg-pureBlack border-b border-zinc-800 flex items-center justify-between px-4 sticky top-0 z-50">
+                        <div className="flex items-center space-x-4">
+                            <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 hover:bg-zincDark rounded-full transition">
+                                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+                            </button>
+                            <span onClick={() => setCurrentTab('home')} className="text-xl font-black tracking-tighter uppercase font-mono cursor-pointer border-b-2 border-brandOrange select-none text-white">
+                                4KWALLPATEER
+                            </span>
+                        </div>
+
+                        {/* WORKING SEARCH BAR BUTTON ELEMENT */}
+                        <form onSubmit={handleSearchSubmit} className="flex items-center w-full max-w-xl mx-4">
+                            <div className="flex w-full bg-zincDark border border-zinc-800 rounded-full overflow-hidden focus-within:border-zinc-600 transition">
+                                <input 
+                                    type="text" 
+                                    placeholder="Search creative 4K content setups..." 
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="w-full bg-transparent px-5 py-1.5 text-sm text-white focus:outline-none placeholder-zinc-600"
+                                />
+                                <button type="submit" className="bg-zincLight border-l border-zinc-800 px-6 py-1.5 hover:bg-zinc-700 transition">
+                                    <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+                                </button>
+                            </div>
+                        </form>
+
+                        <div className="w-8 h-8 rounded-full bg-zincDark border border-zinc-700 text-white flex items-center justify-center font-bold text-xs select-none">A</div>
+                    </header>
+
+                    <div className="flex flex-1">
+                        {/* FUNCTIONAL COLLAPSIBLE SIDEBAR */}
+                        <aside className={`${sidebarOpen ? 'w-64 px-2' : 'w-0 -translate-x-full'} transition-all duration-200 bg-pureBlack border-r border-zinc-900 flex flex-col pt-3 fixed md:sticky top-14 h-[calc(100vh-56px)] z-40 overflow-hidden`}>
+                            <nav className="space-y-1">
+                                <button onClick={() => setCurrentTab('home')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'home' ? 'bg-zincDark text-white' : 'text-zinc-400 hover:bg-zincDark/50 hover:text-white'}`}>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+                                    <span>Home Feed</span>
+                                </button>
+                                <button onClick={() => setCurrentTab('trending')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'trending' ? 'bg-zincDark text-white' : 'text-zinc-400 hover:bg-zincDark/50 hover:text-white'}`}>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
+                                    <span>Trending</span>
+                                </button>
+                                <button onClick={() => setCurrentTab('downloads')} className={`w-full flex items-center space-x-5 px-4 py-2.5 rounded-xl text-sm font-semibold transition ${currentTab === 'downloads' ? 'bg-zincDark text-white' : 'text-zinc-400 hover:bg-zincDark/50 hover:text-white'}`}>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                                    <span>Library</span>
+                                </button>
+                            </nav>
+
+                            <div className="mt-8 border-t border-zinc-900 pt-4 px-4 space-y-3">
+                                <button onClick={() => setCurrentTab('about')} className="block text-xs font-medium text-zinc-500 hover:text-white text-left w-full">About</button>
+                                <button onClick={() => setCurrentTab('cookies')} className="block text-xs font-medium text-zinc-500 hover:text-white text-left w-full">Cookie Policy</button>
+                                <button onClick={() => setCurrentTab('disclaimer')} className="block text-xs font-medium text-zinc-500 hover:text-white text-left w-full">Disclaimer</button>
+                            </div>
+                            
+                            <div className="mt-auto p-4 text-[11px] text-zinc-600 font-mono">
+                                © 2026 4KWALLPATEER
+                            </div>
+                        </aside>
+
+                        {/* DYNAMIC WINDOW WRAPPER CONTENT PANELS */}
+                        <main className="flex-1 min-w-0 px-4 md:px-8 py-4">
+                            
+                            {/* HOME & TRENDING VIEWS */}
+                            {['home', 'trending', 'downloads'].includes(currentTab) && (
+                                <>
+                                    {/* HORIZONTAL CATEGORIES BAR */}
+                                    <div className="flex items-center space-x-2.5 overflow-x-auto no-scrollbar pb-3 sticky top-14 bg-pureBlack z-30">
+                                        {CATEGORIES.map(cat => (
+                                            <button 
+                                                key={cat}
+                                                onClick={() => setSelectedCategory(cat)}
+                                                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider transition ${selectedCategory === cat ? 'bg-white text-black' : 'bg-zincDark text-zinc-400 hover:bg-zincLight hover:text-white'}`}
+                                            >
+                                                {cat}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* PERFORMANCE MASONRY GRID LAYOUT */}
+                                    <div className="masonry-grid mt-4">
+                                        {wallpapers.map(wall => (
+                                            <div key={wall.id} className="masonry-item bg-zincDark border border-zinc-800/60 rounded-xl overflow-hidden group hover:border-zinc-600 transition flex flex-col">
+                                                <div className="relative overflow-hidden bg-black">
+                                                    <img src={wall.image_url} alt={wall.title} loading="lazy" className="w-full h-auto object-cover transform group-hover:scale-[1.01] transition duration-300"/>
+                                                </div>
+                                                <div class="p-4 flex items-start space-x-3">
+                                                    <div class="w-8 h-8 rounded-full bg-zincLight flex-shrink-0 flex items-center justify-center font-mono font-black text-[9px] border border-zinc-700 text-brandOrange">4K</div>
+                                                    <div class="flex-1 min-w-0">
+                                                        <h2 class="text-xs font-bold text-white truncate uppercase tracking-tight">{wall.title}</h2>
+                                                        <p class="text-[10px] text-zinc-500 font-medium mt-0.5">{wall.category} Setup</p>
+                                                    </div>
+                                                </div>
+                                                <div className="px-4 pb-4">
+                                                    <button onClick={() => triggerDownload(wall)} className="w-full py-2 bg-white text-black text-[11px] font-black uppercase tracking-wider rounded-lg hover:bg-zinc-200 transition flex items-center justify-center space-x-2">
+                                                        <span>Download Ultra 4K</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+
+                            {/* ABOUT PAGE VIEW */}
+                            {currentTab === 'about' && (
+                                <div className="max-w-xl py-8">
+                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-zinc-800 pb-2 text-brandOrange">About the Gallery</h1>
+                                    <p className="text-zinc-400 text-sm leading-relaxed">Welcome to 4KWALLPATEER. This site is structured as a dedicated, high-performance platform for original premium desktop backgrounds. Every piece available here is hosted cleanly without third-party internet scraping, providing pixel-perfect fidelity backgrounds.</p>
+                                </div>
+                            )}
+
+                            {/* COOKIES PAGE VIEW */}
+                            {currentTab === 'cookies' && (
+                                <div className="max-w-xl py-8">
+                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-zinc-800 pb-2 text-brandOrange">Cookie Policy</h1>
+                                    <p className="text-zinc-400 text-sm leading-relaxed">We employ minimal structural local browser indicators (like `localStorage`) to safely keep track of user background saving history, metrics preferences, and navigation parameters. No commercial profiling data is captured.</p>
+                                </div>
+                            )}
+
+                            {/* DISCLAIMER PAGE VIEW */}
+                            {currentTab === 'disclaimer' && (
+                                <div className="max-w-xl py-8">
+                                    <h1 className="text-2xl font-black uppercase tracking-tight mb-4 border-b border-zinc-800 pb-2 text-brandOrange">Disclaimer Policy</h1>
+                                    <p className="text-zinc-400 text-sm leading-relaxed">All digital asset items distributed through this layout architecture are deployed exclusively for individual monitor modifications and staging setups. Commercial mass distribution of raw sources remains restricted.</p>
+                                </div>
+                            )}
+
+                        </main>
+                    </div>
+                </div>
+            );
+        }
+
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
     </script>
-
 </body>
 </html>
